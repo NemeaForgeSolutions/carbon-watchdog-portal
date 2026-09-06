@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Portal: Dev Server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/carbon-watchdog-portal"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^([^\\s].*)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\):\\s+(error|warning|info)\\s+(TS\\d+)\\s*:\\s*(.*)$",
+          "file": 1,
+          "location": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*VITE.*ready.*$",
+          "endsPattern": "^.*Local:.*$"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Portal: Build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/carbon-watchdog-portal"
+      },
+      "group": "build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Portal: Lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "options": {
+        "cwd": "${workspaceFolder}/carbon-watchdog-portal"
+      },
+      "group": "test",
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "Portal: Typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}/carbon-watchdog-portal"
+      },
+      "group": "test",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

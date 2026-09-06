@@ -1,0 +1,6 @@
+# Carbon Watchdog Robots Configuration
+User-agent: *
+Allow: /
+
+# Sitemap reference
+Sitemap: https://carbonwatchdog.org/sitemap.xml

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+dist/
+build/
+.parcel-cache/
+.turbo/
+
+# Git & CI
+.git/
+.github/
+.husky/
+
+# IDE & Editor configs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tests & coverage
+coverage/
+test/
+tests/
+__tests__/
+
+# Logs & debug
+*.log
+*.tsbuildinfo
+*.swp
+*.swo
+*.bak
+.pnpm-debug.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Env & secrets (don’t send secrets to Docker!)
+.env*
+.envrc
+
+# Linting, formatting, tooling configs
+commitlint.config.js
+.lintstagedrc.json
+.editorconfig
+.eslint*
+.stylelint*
+.prettier*
+.nvmrc
+
+# Ignore gitignore itself
+.gitignore
+
+# Docs (optional, if you don’t need them in Docker image)
+*.md
+*.yml
