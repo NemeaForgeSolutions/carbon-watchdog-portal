@@ -1,29 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import PageHero from '@/components/PageHero.vue';
-import Badge from '@/components/ui/badge/Badge.vue';
-import Button from '@/components/ui/button/Button.vue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { CheckCircle2, ChevronRight, Database, Upload } from 'lucide-vue-next';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from '@/components/ui/field';
-import {
-  onboardingImportSourceOptions as importSourceOptions,
-  onboardingIndustryOptions as industryOptions,
-  onboardingInviteRoleOptions as inviteRoleOptions,
-  onboardingRegionOptions as regionOptions,
-  onboardingSteps as steps,
-} from '@/data/siteContent';
-import { EMAIL_PATTERN } from '@/constants';
+import Badge from '@/components/ui/badge/Badge.vue';
+import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
-
 import {
   Select,
   SelectContent,
@@ -31,833 +14,530 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import Textarea from '@/components/ui/textarea/Textarea.vue';
-import { useOnboarding } from '@/composables/useOnboarding';
+import { useCarbonDossier } from '@/composables/useCarbonDossier';
+import {
+  ONBOARDING_INITIAL_ORG,
+  ONBOARDING_INITIAL_TEAM,
+  ONBOARDING_SLIDER_DEFAULTS,
+} from '@/constants';
 
-type FeedbackTone = 'success' | 'error' | 'info';
+const router = useRouter();
+const { showToast } = useCarbonDossier();
 
-const {
-  status,
-  importJobs,
-  loading,
-  errorMessage,
-  refreshOnboarding,
-  startOnboarding,
-  inviteUser,
-  queueImport,
-  completeOnboarding,
-} = useOnboarding();
+const currentStep = ref(1);
 
-const organizationName = ref('');
-const industry = ref('');
-const region = ref('');
-const websiteUrl = ref('');
-const adminEmail = ref('');
+// Step 1: Organization
+const orgName = ref(ONBOARDING_INITIAL_ORG.orgName);
+const orgIndustry = ref(ONBOARDING_INITIAL_ORG.orgIndustry);
+const orgHq = ref(ONBOARDING_INITIAL_ORG.orgHq);
+const portfolioSize = ref(ONBOARDING_INITIAL_ORG.portfolioSize);
 
+// Step 2: Team
+const teamMembers = ref([...ONBOARDING_INITIAL_TEAM]);
 const inviteEmail = ref('');
-const inviteRole = ref('analyst');
-const importSource = ref('csv');
-const importDescription = ref('Initial project registry upload');
+const inviteRole = ref('Analyst');
 
-const actionMessage = ref('');
-const feedbackTone = ref<FeedbackTone>('info');
-const submitting = ref(false);
-
-type OrganizationFieldKey = 'organizationName' | 'adminEmail' | 'websiteUrl';
-type InviteFieldKey = 'inviteEmail' | 'inviteRole';
-type ImportFieldKey = 'importSource';
-
-const organizationFieldErrors = ref<Record<OrganizationFieldKey, string>>({
-  organizationName: '',
-  adminEmail: '',
-  websiteUrl: '',
-});
-
-const inviteFieldErrors = ref<Record<InviteFieldKey, string>>({
-  inviteEmail: '',
-  inviteRole: '',
-});
-
-const importFieldErrors = ref<Record<ImportFieldKey, string>>({
-  importSource: '',
-});
-
-const emailPattern = EMAIL_PATTERN;
-
-
-let refreshTimer: number | null = null;
-
-const summaryStats = computed(() => [
-  { label: 'Current step', value: status.value?.currentStep || 'organization' },
-  { label: 'Completed steps', value: String(status.value?.completedSteps.length || 0) },
-  { label: 'Pending steps', value: String(status.value?.pendingSteps.length || steps.length) },
-]);
-
-const completionRatio = computed(() => {
-  const completed = status.value?.completedSteps.length || 0;
-  return Math.round((completed / steps.length) * 100);
-});
-
-const hasActiveImports = computed(() =>
-  importJobs.value.some((job) => job.status === 'queued' || job.status === 'processing'),
-);
-
-const statusHighlights = computed(() => [
-  { label: 'Queued', value: String(status.value?.importQueued || 0) },
-  { label: 'Processing', value: String(status.value?.importRunning || 0) },
-  { label: 'Completed', value: String(status.value?.importDone || 0) },
-  { label: 'Failed', value: String(status.value?.importFailed || 0) },
-]);
-
-const feedbackMessage = computed(() => {
-  if (actionMessage.value) return actionMessage.value;
-  if (errorMessage.value) return errorMessage.value;
-  if (loading.value) return 'Loading onboarding status...';
-  return '';
-});
-
-const feedbackCardClass = computed(() => {
-  if (actionMessage.value) {
-    return feedbackTone.value === 'success'
-      ? 'border-emerald-500/25 bg-emerald-500/10 backdrop-blur'
-      : 'border-amber-500/25 bg-amber-500/10 backdrop-blur';
-  }
-
-  if (errorMessage.value) return 'border-amber-500/25 bg-amber-500/10 backdrop-blur';
-  return 'border-sky-500/25 bg-sky-500/10 backdrop-blur';
-});
-
-const feedbackBadgeClass = computed(() => {
-  if (actionMessage.value) {
-    return feedbackTone.value === 'success'
-      ? 'border-emerald-500/25 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300'
-      : 'border-amber-500/25 bg-amber-500/15 font-semibold text-amber-700 dark:text-amber-300';
-  }
-
-  if (errorMessage.value)
-    return 'border-amber-500/25 bg-amber-500/15 font-semibold text-amber-700 dark:text-amber-300';
-  return 'border-sky-500/25 bg-sky-500/15 font-semibold text-sky-700 dark:text-sky-300';
-});
-
-const feedbackBadgeLabel = computed(() => {
-  if (actionMessage.value) return feedbackTone.value === 'success' ? 'Updated' : 'Attention';
-  if (errorMessage.value) return 'Attention';
-  return 'Syncing';
-});
-
-const feedbackTextClass = computed(() => {
-  if (actionMessage.value) {
-    return feedbackTone.value === 'success'
-      ? 'text-emerald-950 dark:text-emerald-50/90'
-      : 'text-amber-950 dark:text-amber-50/90';
-  }
-
-  if (errorMessage.value) return 'text-amber-950 dark:text-amber-50/90';
-  return 'text-sky-950 dark:text-sky-50/90';
-});
-
-const setFeedback = (message: string, tone: FeedbackTone) => {
-  actionMessage.value = message;
-  feedbackTone.value = tone;
+const addTeamMember = () => {
+  if (!inviteEmail.value.trim()) return;
+  teamMembers.value.push({
+    email: inviteEmail.value,
+    role: inviteRole.value,
+  });
+  inviteEmail.value = '';
+  showToast('Team member added.');
 };
 
-const resetFeedback = () => {
-  actionMessage.value = '';
-  feedbackTone.value = 'info';
+// Step 3: Portfolio Import
+const csvUploaded = ref(false);
+const registryConnected = ref(false);
+
+const handleSimulatedDrop = () => {
+  csvUploaded.value = true;
+  showToast('Simulated CSV uploaded: 48 project polygon boundaries & retirement serials parsed.');
 };
 
-const isValidOptionalUrl = (value: string) => {
-  const trimmedValue = value.trim();
+const handleConnectRegistry = () => {
+  registryConnected.value = true;
+  showToast('Connected to Verra VCS & Gold Standard API ledgers.');
+};
 
-  if (!trimmedValue) return true;
+// Step 4: Alert Configuration (Functional Sliders)
+const alertSensitivity = ref(ONBOARDING_SLIDER_DEFAULTS.alertSensitivity);
+const confidenceCutoff = ref(ONBOARDING_SLIDER_DEFAULTS.confidenceCutoff);
+const criticalExposureThreshold = ref(ONBOARDING_SLIDER_DEFAULTS.criticalExposureThreshold);
 
-  try {
-    const parsedValue = new window.URL(trimmedValue);
-    return parsedValue.protocol === 'http:' || parsedValue.protocol === 'https:';
-  } catch {
-    return false;
+const nextStep = () => {
+  if (currentStep.value < 5) {
+    currentStep.value++;
   }
 };
 
-const clearOrganizationFieldError = (field: OrganizationFieldKey) => {
-  if (organizationFieldErrors.value[field]) {
-    organizationFieldErrors.value[field] = '';
+const prevStep = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--;
   }
 };
 
-const clearInviteFieldError = (field: InviteFieldKey) => {
-  if (inviteFieldErrors.value[field]) {
-    inviteFieldErrors.value[field] = '';
-  }
+const finishOnboarding = () => {
+  showToast('Workspace fully provisioned! Entering Carbon Watchdog Command Center.');
+  router.push('/');
 };
-
-const clearImportFieldError = (field: ImportFieldKey) => {
-  if (importFieldErrors.value[field]) {
-    importFieldErrors.value[field] = '';
-  }
-};
-
-const validateOrganizationForm = () => {
-  organizationFieldErrors.value = {
-    organizationName: organizationName.value.trim() ? '' : 'Enter the organization name.',
-    adminEmail: emailPattern.test(adminEmail.value.trim()) ? '' : 'Enter a valid admin email.',
-    websiteUrl: isValidOptionalUrl(websiteUrl.value)
-      ? ''
-      : 'Enter a valid website URL, including https://.',
-  };
-
-  return !Object.values(organizationFieldErrors.value).some(Boolean);
-};
-
-const validateInviteForm = () => {
-  inviteFieldErrors.value = {
-    inviteEmail: emailPattern.test(inviteEmail.value.trim()) ? '' : 'Enter a valid reviewer email.',
-    inviteRole: inviteRole.value ? '' : 'Select a reviewer role.',
-  };
-
-  return !Object.values(inviteFieldErrors.value).some(Boolean);
-};
-
-const validateImportForm = () => {
-  importFieldErrors.value = {
-    importSource: importSource.value ? '' : 'Select a source type.',
-  };
-
-  return !Object.values(importFieldErrors.value).some(Boolean);
-};
-
-const importStatusClass = (statusValue: string) => {
-  if (statusValue === 'completed')
-    return 'border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300';
-  if (statusValue === 'failed')
-    return 'border-red-500/30 bg-red-500/10 font-semibold text-red-700 dark:text-red-300';
-  if (statusValue === 'processing')
-    return 'border-sky-500/30 bg-sky-500/10 font-semibold text-sky-700 dark:text-sky-300';
-  return 'border-amber-500/30 bg-amber-500/10 font-semibold text-amber-700 dark:text-amber-300';
-};
-
-const onStart = async () => {
-  resetFeedback();
-
-  if (!validateOrganizationForm()) {
-    return;
-  }
-
-  organizationName.value = organizationName.value.trim();
-  adminEmail.value = adminEmail.value.trim();
-  websiteUrl.value = websiteUrl.value.trim();
-  submitting.value = true;
-  try {
-    await startOnboarding({
-      organizationName: organizationName.value,
-      industry: industry.value,
-      region: region.value,
-      websiteUrl: websiteUrl.value,
-      adminEmail: adminEmail.value,
-    });
-    setFeedback(
-      'Organization profile saved. Continue with reviewer access and import setup.',
-      'success',
-    );
-  } catch {
-    setFeedback('Could not start onboarding. Please verify API availability.', 'error');
-  } finally {
-    submitting.value = false;
-  }
-};
-
-const onInvite = async () => {
-  resetFeedback();
-
-  if (!validateInviteForm()) {
-    return;
-  }
-
-  inviteEmail.value = inviteEmail.value.trim();
-  submitting.value = true;
-  try {
-    await inviteUser({ email: inviteEmail.value, role: inviteRole.value });
-    setFeedback('Reviewer invite queued successfully.', 'success');
-    inviteEmail.value = '';
-  } catch {
-    setFeedback('Unable to queue invite right now.', 'error');
-  } finally {
-    submitting.value = false;
-  }
-};
-
-const onImport = async () => {
-  resetFeedback();
-
-  if (!validateImportForm()) {
-    return;
-  }
-
-  importDescription.value = importDescription.value.trim();
-  submitting.value = true;
-  try {
-    await queueImport({ sourceType: importSource.value, description: importDescription.value });
-    setFeedback('Import job queued. Readiness will update as processing completes.', 'success');
-  } catch {
-    setFeedback('Unable to queue import.', 'error');
-  } finally {
-    submitting.value = false;
-  }
-};
-
-const onComplete = async () => {
-  resetFeedback();
-  submitting.value = true;
-  try {
-    await completeOnboarding();
-    setFeedback('Onboarding marked complete. Tenant is now operational.', 'success');
-  } catch {
-    setFeedback('Unable to complete onboarding.', 'error');
-  } finally {
-    submitting.value = false;
-  }
-};
-
-onMounted(() => {
-  void refreshOnboarding();
-  refreshTimer = window.setInterval(() => {
-    if (hasActiveImports.value) {
-      void refreshOnboarding();
-    }
-  }, 4000);
-});
-
-onBeforeUnmount(() => {
-  if (refreshTimer !== null) {
-    window.clearInterval(refreshTimer);
-  }
-});
 </script>
 
 <template>
-  <div class="space-y-8">
-    <PageHero
-      eyebrow="Customer onboarding"
-      title="Configure a tenant, invite reviewers, and activate ingestion"
-      description="This workflow captures the organization profile, establishes reviewer access, queues initial registry imports, and tracks readiness toward the first monitored report."
-      :stats="summaryStats"
-    />
+  <div class="max-w-3xl mx-auto space-y-8 py-6 pb-16">
+    <!-- Progress Indicator -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between text-xs font-mono">
+        <Badge
+          variant="secondary"
+          class="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] uppercase tracking-wider"
+        >
+          Workspace Onboarding Setup
+        </Badge>
+        <span class="text-muted-foreground dark:text-slate-400">Step {{ currentStep }} of 5</span>
+      </div>
 
-    <Card class="cw-animate-in cw-delay-1 border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-      <CardContent class="p-4 sm:p-6 lg:p-7">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Badge
-              variant="secondary"
-              class="border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1.5"
-            >
-              <span class="cw-radar-dot h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
-              Launch readiness
-            </Badge>
-            <h3 class="mt-3 text-xl sm:text-2xl font-black text-foreground">
-              Track setup progress without leaving the workflow.
-            </h3>
-          </div>
+      <!-- Step Bar -->
+      <div
+        class="grid grid-cols-5 gap-1.5 h-2 bg-muted dark:bg-slate-900 rounded-full border border-border/70 dark:border-white/10 overflow-hidden"
+      >
+        <div
+          v-for="s in 5"
+          :key="s"
+          class="h-full transition-all duration-500"
+          :class="s <= currentStep ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-transparent'"
+        ></div>
+      </div>
+    </div>
 
-          <p class="text-foreground text-sm font-semibold">
-            {{ completionRatio }}% complete
+    <!-- STEP 1: ORGANIZATION -->
+    <Card
+      v-if="currentStep === 1"
+      class="border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-950/70 backdrop-blur-xl shadow-xl dark:shadow-2xl"
+    >
+      <CardContent class="p-6 sm:p-8 space-y-5">
+        <div>
+          <span
+            class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block font-bold"
+            >Step 1</span
+          >
+          <h2 class="text-2xl font-black text-foreground dark:text-white font-sans mt-1">
+            Organization Profile
+          </h2>
+          <p class="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+            Set up your institution identity and legal portfolio baseline.
           </p>
         </div>
 
-        <div class="bg-muted mt-4 h-2 rounded-full overflow-hidden">
-          <div
-            class="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-700 ease-out"
-            :style="{ width: `${completionRatio}%` }"
-          ></div>
-        </div>
-
-        <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 sm:gap-3">
-          <div
-            v-for="step in steps"
-            :key="step.key"
-            class="rounded-[1.15rem] border p-2.5 sm:p-3 text-[0.68rem] sm:text-xs font-semibold tracking-[0.14em] uppercase transition-all duration-300"
-            :class="
-              status?.completedSteps.includes(step.key)
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                : 'border-border/80 bg-muted/40 text-muted-foreground'
-            "
-          >
-            {{ step.label }}
-          </div>
-        </div>
-
-        <div class="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-2 xl:grid-cols-4 sm:gap-3">
-          <div
-            v-for="item in statusHighlights"
-            :key="item.label"
-            class="cw-card-interactive border-border/80 bg-muted/40 rounded-[1.15rem] border p-3.5 sm:p-4 transition-all duration-300 hover:border-emerald-500/40 hover:bg-muted/60 hover:shadow-sm"
-          >
-            <p
-              class="text-muted-foreground text-[0.66rem] sm:text-[0.68rem] font-semibold tracking-[0.18em] uppercase"
+        <div class="space-y-4 pt-2 font-mono text-xs">
+          <div class="space-y-1">
+            <label class="text-muted-foreground dark:text-slate-400 uppercase text-[10px]"
+              >Organization Name</label
             >
-              {{ item.label }}
-            </p>
-            <p class="text-foreground mt-1 sm:mt-2 text-xl sm:text-2xl font-black">
-              {{ item.value }}
-            </p>
+            <Input
+              v-model="orgName"
+              placeholder="e.g. Horizon Climate Capital"
+              class="border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/60 text-foreground dark:text-white font-mono text-xs"
+            />
           </div>
+
+          <div class="space-y-1">
+            <label class="text-muted-foreground dark:text-slate-400 uppercase text-[10px]"
+              >Industry & Mandate</label
+            >
+            <Input
+              v-model="orgIndustry"
+              placeholder="e.g. Asset Management & ESG Investment"
+              class="border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/60 text-foreground dark:text-white font-mono text-xs"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-muted-foreground dark:text-slate-400 uppercase text-[10px]"
+              >Global Headquarters</label
+            >
+            <Input
+              v-model="orgHq"
+              placeholder="e.g. London, United Kingdom"
+              class="border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/60 text-foreground dark:text-white font-mono text-xs"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-muted-foreground dark:text-slate-400 uppercase text-[10px]"
+              >Portfolio Size Under Watch</label
+            >
+            <Input
+              v-model="portfolioSize"
+              placeholder="e.g. $100M+ Offset Assets"
+              class="border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/60 text-foreground dark:text-white font-mono text-xs"
+            />
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-border/70 dark:border-white/10 flex justify-end">
+          <Button
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold gap-1.5"
+            @click="nextStep"
+          >
+            Continue to Team Setup <ChevronRight class="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
 
-    <section class="cw-animate-in cw-delay-2 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-      <Card class="border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-        <CardContent class="p-4 sm:p-6 lg:p-7">
-          <Badge
-            variant="secondary"
-            class="border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
+    <!-- STEP 2: TEAM -->
+    <Card
+      v-if="currentStep === 2"
+      class="border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-950/70 backdrop-blur-xl shadow-xl dark:shadow-2xl"
+    >
+      <CardContent class="p-6 sm:p-8 space-y-5">
+        <div>
+          <span
+            class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block font-bold"
+            >Step 2</span
           >
-            Organization profile
-          </Badge>
-          <h3 class="mt-3 text-2xl font-black text-foreground">
-            Register the operating entity.
-          </h3>
+          <h2 class="text-2xl font-black text-foreground dark:text-white font-sans mt-1">
+            Authorized Team & Roles
+          </h2>
+          <p class="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+            Assign analyst, governance, and administrative access permissions.
+          </p>
+        </div>
 
-          <form
-            class="mt-6"
-            novalidate
-            @submit.prevent="onStart"
+        <!-- Add Member Input -->
+        <div class="flex flex-col sm:flex-row gap-2 pt-2 font-mono text-xs">
+          <Input
+            v-model="inviteEmail"
+            placeholder="colleague@institution.com"
+            class="border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/60 text-foreground dark:text-white font-mono text-xs flex-1"
+          />
+          <Select v-model="inviteRole">
+            <SelectTrigger
+              class="w-[140px] h-9 px-3 rounded-xl border-border/70 dark:border-white/10 bg-card dark:bg-slate-900 text-xs font-mono text-foreground dark:text-slate-200"
+            >
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Admin"> Admin </SelectItem>
+              <SelectItem value="Analyst"> Analyst </SelectItem>
+              <SelectItem value="Viewer"> Viewer </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            class="bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs font-mono"
+            @click="addTeamMember"
           >
-            <FieldSet>
-              <FieldLegend class="sr-only">
-                Organization profile fields
-              </FieldLegend>
+            Add
+          </Button>
+        </div>
 
-              <FieldGroup class="gap-5">
-                <div class="grid gap-5 md:grid-cols-2">
-                  <Field
-                    class="gap-2"
-                    :data-invalid="organizationFieldErrors.organizationName ? true : undefined"
-                  >
-                    <FieldLabel for="organization-name">
-                      Organization name
-                    </FieldLabel>
-                    <Input
-                      id="organization-name"
-                      v-model="organizationName"
-                      placeholder="Acme Climate Holdings"
-                      :aria-invalid="organizationFieldErrors.organizationName ? true : undefined"
-                      @update:model-value="clearOrganizationFieldError('organizationName')"
-                    />
-                    <FieldDescription>
-                      Register the legal or operating entity for this tenant workspace.
-                    </FieldDescription>
-                    <FieldError
-                      :errors="
-                        organizationFieldErrors.organizationName
-                          ? [organizationFieldErrors.organizationName]
-                          : undefined
-                      "
-                    />
-                  </Field>
-
-                  <Field
-                    class="gap-2"
-                    :data-invalid="organizationFieldErrors.adminEmail ? true : undefined"
-                  >
-                    <FieldLabel for="admin-email">
-                      Admin email
-                    </FieldLabel>
-                    <Input
-                      id="admin-email"
-                      v-model="adminEmail"
-                      type="email"
-                      placeholder="owner@acme.com"
-                      :aria-invalid="organizationFieldErrors.adminEmail ? true : undefined"
-                      @update:model-value="clearOrganizationFieldError('adminEmail')"
-                    />
-                    <FieldDescription>
-                      This address becomes the initial organization owner in the workflow.
-                    </FieldDescription>
-                    <FieldError
-                      :errors="
-                        organizationFieldErrors.adminEmail
-                          ? [organizationFieldErrors.adminEmail]
-                          : undefined
-                      "
-                    />
-                  </Field>
-
-                  <Field class="gap-2">
-                    <FieldLabel for="industry">
-                      Industry
-                    </FieldLabel>
-                    <Select v-model="industry">
-                      <SelectTrigger
-                        id="industry"
-                        class="w-full"
-                      >
-                        <SelectValue placeholder="Select an industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="option in industryOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      Optional, but useful for benchmark context and buyer positioning.
-                    </FieldDescription>
-                  </Field>
-
-                  <Field class="gap-2">
-                    <FieldLabel for="region">
-                      Primary region
-                    </FieldLabel>
-                    <Select v-model="region">
-                      <SelectTrigger
-                        id="region"
-                        class="w-full"
-                      >
-                        <SelectValue placeholder="Select a region" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="option in regionOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      Optional. Use the main operating or reporting jurisdiction for the tenant.
-                    </FieldDescription>
-                  </Field>
-                </div>
-
-                <Field
-                  class="gap-2"
-                  :data-invalid="organizationFieldErrors.websiteUrl ? true : undefined"
-                >
-                  <FieldLabel for="website-url">
-                    Website
-                  </FieldLabel>
-                  <Input
-                    id="website-url"
-                    v-model="websiteUrl"
-                    type="url"
-                    placeholder="https://acme.com"
-                    :aria-invalid="organizationFieldErrors.websiteUrl ? true : undefined"
-                    @update:model-value="clearOrganizationFieldError('websiteUrl')"
-                  />
-                  <FieldDescription>
-                    Optional. Add the public site if the organization has one.
-                  </FieldDescription>
-                  <FieldError
-                    :errors="
-                      organizationFieldErrors.websiteUrl
-                        ? [organizationFieldErrors.websiteUrl]
-                        : undefined
-                    "
-                  />
-                </Field>
-              </FieldGroup>
-
-              <Button
-                type="submit"
-                class="w-full sm:w-auto"
-                :disabled="submitting"
-              >
-                Save organization profile
-              </Button>
-            </FieldSet>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div class="grid gap-6">
-        <Card class="border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-          <CardContent class="p-4 sm:p-6 lg:p-7">
+        <!-- Team List -->
+        <div class="space-y-2 pt-2 font-mono text-xs">
+          <div
+            v-for="m in teamMembers"
+            :key="m.email"
+            class="p-3 rounded-xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/40 flex items-center justify-between"
+          >
+            <span class="text-foreground dark:text-slate-200">{{ m.email }}</span>
             <Badge
-              variant="secondary"
-              class="border-sky-500/30 bg-sky-500/10 font-semibold text-sky-700 dark:text-sky-300"
+              variant="outline"
+              class="border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px]"
             >
-              Reviewer access
+              {{ m.role }}
             </Badge>
-            <form
-              class="mt-5"
-              novalidate
-              @submit.prevent="onInvite"
-            >
-              <FieldSet>
-                <FieldLegend class="sr-only">
-                  Reviewer access fields
-                </FieldLegend>
-
-                <FieldGroup class="gap-5">
-                  <Field
-                    class="gap-2"
-                    :data-invalid="inviteFieldErrors.inviteEmail ? true : undefined"
-                  >
-                    <FieldLabel for="invite-email">
-                      Reviewer email
-                    </FieldLabel>
-                    <Input
-                      id="invite-email"
-                      v-model="inviteEmail"
-                      type="email"
-                      placeholder="analyst@acme.com"
-                      :aria-invalid="inviteFieldErrors.inviteEmail ? true : undefined"
-                      @update:model-value="clearInviteFieldError('inviteEmail')"
-                    />
-                    <FieldDescription>
-                      Queue access for the reviewer who should validate early data quality.
-                    </FieldDescription>
-                    <FieldError
-                      :errors="
-                        inviteFieldErrors.inviteEmail ? [inviteFieldErrors.inviteEmail] : undefined
-                      "
-                    />
-                  </Field>
-
-                  <Field
-                    class="gap-2"
-                    :data-invalid="inviteFieldErrors.inviteRole ? true : undefined"
-                  >
-                    <FieldLabel for="invite-role">
-                      Role
-                    </FieldLabel>
-                    <Select
-                      v-model="inviteRole"
-                      @update:model-value="clearInviteFieldError('inviteRole')"
-                    >
-                      <SelectTrigger
-                        id="invite-role"
-                        class="w-full"
-                        :aria-invalid="inviteFieldErrors.inviteRole ? true : undefined"
-                      >
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="option in inviteRoleOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      Choose the initial permission level for the invited reviewer.
-                    </FieldDescription>
-                    <FieldError
-                      :errors="
-                        inviteFieldErrors.inviteRole ? [inviteFieldErrors.inviteRole] : undefined
-                      "
-                    />
-                  </Field>
-                </FieldGroup>
-
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  class="w-full"
-                  :disabled="submitting"
-                >
-                  Queue reviewer invite
-                </Button>
-              </FieldSet>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card class="border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-          <CardContent class="p-4 sm:p-6 lg:p-7">
-            <Badge
-              variant="secondary"
-              class="border-amber-500/30 bg-amber-500/10 font-semibold text-amber-700 dark:text-amber-300"
-            >
-              Data ingestion
-            </Badge>
-            <form
-              class="mt-5"
-              novalidate
-              @submit.prevent="onImport"
-            >
-              <FieldSet>
-                <FieldLegend class="sr-only">
-                  Data ingestion fields
-                </FieldLegend>
-
-                <FieldGroup class="gap-5">
-                  <Field
-                    class="gap-2"
-                    :data-invalid="importFieldErrors.importSource ? true : undefined"
-                  >
-                    <FieldLabel for="import-source">
-                      Source type
-                    </FieldLabel>
-                    <Select
-                      v-model="importSource"
-                      @update:model-value="clearImportFieldError('importSource')"
-                    >
-                      <SelectTrigger
-                        id="import-source"
-                        class="w-full"
-                        :aria-invalid="importFieldErrors.importSource ? true : undefined"
-                      >
-                        <SelectValue placeholder="Select a source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          v-for="option in importSourceOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      Select the first registry or feed type you want the worker to process.
-                    </FieldDescription>
-                    <FieldError
-                      :errors="
-                        importFieldErrors.importSource
-                          ? [importFieldErrors.importSource]
-                          : undefined
-                      "
-                    />
-                  </Field>
-
-                  <Field class="gap-2">
-                    <FieldLabel for="import-description">
-                      Import description
-                    </FieldLabel>
-                    <Textarea
-                      id="import-description"
-                      v-model="importDescription"
-                      rows="4"
-                    />
-                    <FieldDescription>
-                      Optional. Describe the batch, registry export, or readiness goal for this
-                      import.
-                    </FieldDescription>
-                  </Field>
-                </FieldGroup>
-
-                <Button
-                  type="submit"
-                  variant="outline"
-                  class="w-full"
-                  :disabled="submitting"
-                >
-                  Queue import
-                </Button>
-              </FieldSet>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card class="border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-          <CardContent class="p-4 sm:p-6 lg:p-7">
-            <Badge
-              variant="secondary"
-              class="border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-            >
-              Go-live control
-            </Badge>
-            <p class="text-muted-foreground mt-4 text-sm leading-7">
-              Mark the tenant complete once the organization, reviewer access, import readiness, and
-              baseline reporting steps are all verified.
-            </p>
-            <Button
-              class="mt-5 w-full"
-              :disabled="submitting"
-              @click="onComplete"
-            >
-              Mark onboarding complete
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-
-    <Card class="border-border/80 bg-card/85 text-card-foreground shadow-xl backdrop-blur-xl">
-      <CardContent class="p-4 sm:p-6 lg:p-7">
-        <Badge
-          variant="secondary"
-          class="border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-300"
-        >
-          Import jobs
-        </Badge>
-        <h3 class="mt-3 text-2xl font-black text-foreground">
-          Track ingestion status and failure details.
-        </h3>
+          </div>
+        </div>
 
         <div
-          v-if="importJobs.length === 0"
-          class="border-border/80 bg-muted/40 text-muted-foreground mt-5 rounded-[1.15rem] border px-4 py-3 text-sm"
+          class="pt-4 border-t border-border/70 dark:border-white/10 flex items-center justify-between"
         >
-          No import jobs yet. Queue a CSV, registry API, or S3 job to start the pipeline.
-        </div>
-
-        <div class="mt-5 space-y-4">
-          <div
-            v-for="job in importJobs"
-            :key="job.id"
-            class="border-border/80 bg-muted/40 mt-5 rounded-[1.35rem] border p-4 shadow-sm backdrop-blur-sm"
+          <Button
+            type="button"
+            variant="ghost"
+            class="text-xs font-mono text-muted-foreground dark:text-slate-400"
+            @click="prevStep"
           >
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <p class="text-foreground text-sm font-semibold">
-                {{ job.sourceType }}: {{ job.description || 'Import job' }}
-              </p>
-              <span
-                class="rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.14em] uppercase"
-                :class="importStatusClass(job.status)"
-              >
-                {{ job.status }}
-              </span>
-            </div>
-
-            <div class="bg-muted mt-3 h-2 rounded-full">
-              <div
-                class="h-2 rounded-full bg-sky-500 dark:bg-sky-400"
-                :style="{ width: `${job.progressPercent || 0}%` }"
-              ></div>
-            </div>
-
-            <p class="text-muted-foreground mt-2 text-xs">
-              Created: {{ job.createdAt }}
-              <span v-if="job.completedAt"> | Completed: {{ job.completedAt }}</span>
-            </p>
-            <p
-              v-if="job.errorMessage"
-              class="mt-2 text-xs text-red-600 dark:text-red-300"
-            >
-              {{ job.errorMessage }}
-            </p>
-          </div>
+            Back
+          </Button>
+          <Button
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold gap-1.5"
+            @click="nextStep"
+          >
+            Continue to Portfolio Import <ChevronRight class="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
 
+    <!-- STEP 3: PORTFOLIO IMPORT -->
     <Card
-      v-if="feedbackMessage"
-      :class="feedbackCardClass"
+      v-if="currentStep === 3"
+      class="border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-950/70 backdrop-blur-xl shadow-xl dark:shadow-2xl"
     >
-      <CardContent class="p-6">
-        <Badge
-          variant="secondary"
-          :class="feedbackBadgeClass"
+      <CardContent class="p-6 sm:p-8 space-y-5">
+        <div>
+          <span
+            class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block font-bold"
+            >Step 3</span
+          >
+          <h2 class="text-2xl font-black text-foreground dark:text-white font-sans mt-1">
+            Portfolio Ingestion
+          </h2>
+          <p class="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+            Upload target polygon coordinates or connect directly to voluntary registries.
+          </p>
+        </div>
+
+        <!-- CSV Dropzone -->
+        <div
+          class="border-2 border-dashed border-border/80 hover:border-emerald-500/50 rounded-2xl p-8 text-center bg-muted/30 dark:bg-slate-900/30 transition cursor-pointer space-y-3"
+          @click="handleSimulatedDrop"
         >
-          {{ feedbackBadgeLabel }}
-        </Badge>
-        <p :class="['mt-4 text-sm leading-7', feedbackTextClass]">
-          {{ feedbackMessage }}
-        </p>
+          <div
+            class="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto"
+          >
+            <Upload class="h-6 w-6" />
+          </div>
+          <div>
+            <span class="text-sm font-bold text-foreground dark:text-white font-sans block">
+              {{
+                csvUploaded
+                  ? '✓ portfolio_extract_2026.csv Uploaded'
+                  : 'Drag & drop portfolio CSV or click to browse'
+              }}
+            </span>
+            <span class="text-xs text-muted-foreground dark:text-slate-400 font-mono mt-1 block">
+              Accepts Verra VCS serials, project boundary GeoJSONs, or registry spreadsheets.
+            </span>
+          </div>
+        </div>
+
+        <!-- Simulated Registry Connector Button -->
+        <div
+          class="p-4 rounded-xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono"
+        >
+          <div>
+            <strong class="text-foreground dark:text-white block font-sans"
+              >Simulated Registry Connector</strong
+            >
+            <span class="text-muted-foreground dark:text-slate-400"
+              >Directly sync active retirements from Verra & Gold Standard.</span
+            >
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            class="border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-bold gap-1.5"
+            @click="handleConnectRegistry"
+          >
+            <Database class="h-3.5 w-3.5" />
+            {{ registryConnected ? '✓ Registry Linked' : 'Connect Registry' }}
+          </Button>
+        </div>
+
+        <div
+          class="pt-4 border-t border-border/70 dark:border-white/10 flex items-center justify-between"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            class="text-xs font-mono text-muted-foreground dark:text-slate-400"
+            @click="prevStep"
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold gap-1.5"
+            @click="nextStep"
+          >
+            Continue to Alert Settings <ChevronRight class="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- STEP 4: ALERT CONFIGURATION (FUNCTIONAL SLIDERS) -->
+    <Card
+      v-if="currentStep === 4"
+      class="border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-950/70 backdrop-blur-xl shadow-xl dark:shadow-2xl"
+    >
+      <CardContent class="p-6 sm:p-8 space-y-6">
+        <div>
+          <span
+            class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block font-bold"
+            >Step 4</span
+          >
+          <h2 class="text-2xl font-black text-foreground dark:text-white font-sans mt-1">
+            Risk Alert Configuration
+          </h2>
+          <p class="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+            Adjust statistical anomaly sensitivity and notification thresholds.
+          </p>
+        </div>
+
+        <div class="space-y-5 font-mono text-xs">
+          <!-- Slider 1: Alert Sensitivity -->
+          <div
+            class="p-4 rounded-xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/40 space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-foreground dark:text-slate-300 font-bold uppercase"
+                >Alert Sensitivity</span
+              >
+              <strong class="text-emerald-600 dark:text-emerald-400 text-sm"
+                >{{ alertSensitivity }}%</strong
+              >
+            </div>
+            <input
+              v-model.number="alertSensitivity"
+              type="range"
+              min="50"
+              max="99"
+              class="w-full accent-emerald-500"
+            />
+            <span class="text-[11px] text-muted-foreground dark:text-slate-400 font-sans block"
+              >Defines optical canopy loss detection sensitivity.</span
+            >
+          </div>
+
+          <!-- Slider 2: Confidence Cutoff -->
+          <div
+            class="p-4 rounded-xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/40 space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-foreground dark:text-slate-300 font-bold uppercase"
+                >Confidence Cutoff</span
+              >
+              <strong class="text-cyan-600 dark:text-cyan-400 text-sm"
+                >{{ confidenceCutoff }}%</strong
+              >
+            </div>
+            <input
+              v-model.number="confidenceCutoff"
+              type="range"
+              min="60"
+              max="99"
+              class="w-full accent-cyan-500"
+            />
+            <span class="text-[11px] text-muted-foreground dark:text-slate-400 font-sans block"
+              >Minimum multi-sensor agreement score before generating an executive risk flag.</span
+            >
+          </div>
+
+          <!-- Slider 3: Critical Exposure Threshold -->
+          <div
+            class="p-4 rounded-xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-slate-900/40 space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-foreground dark:text-slate-300 font-bold uppercase"
+                >Critical Exposure Threshold</span
+              >
+              <strong class="text-rose-600 dark:text-rose-400 text-sm"
+                >${{ criticalExposureThreshold }}M USD</strong
+              >
+            </div>
+            <input
+              v-model.number="criticalExposureThreshold"
+              type="range"
+              min="5"
+              max="100"
+              class="w-full accent-rose-500"
+            />
+            <span class="text-[11px] text-muted-foreground dark:text-slate-400 font-sans block"
+              >Threshold for mandatory peer review and legal counsel dispatch.</span
+            >
+          </div>
+        </div>
+
+        <div
+          class="pt-4 border-t border-border/70 dark:border-white/10 flex items-center justify-between"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            class="text-xs font-mono text-muted-foreground dark:text-slate-400"
+            @click="prevStep"
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold gap-1.5"
+            @click="nextStep"
+          >
+            Complete Configuration <ChevronRight class="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- STEP 5: FINAL SCREEN - WORKSPACE READY -->
+    <Card
+      v-if="currentStep === 5"
+      class="border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-card to-card dark:from-emerald-950/40 dark:via-slate-950/80 dark:to-slate-950 shadow-2xl backdrop-blur-xl text-center"
+    >
+      <CardContent class="p-8 sm:p-12 space-y-6">
+        <div
+          class="h-16 w-16 rounded-3xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20"
+        >
+          <CheckCircle2 class="h-8 w-8" />
+        </div>
+
+        <div class="space-y-2">
+          <Badge
+            variant="secondary"
+            class="border-emerald-500/40 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[11px] tracking-widest uppercase"
+          >
+            INITIALIZATION COMPLETE
+          </Badge>
+          <h2
+            class="text-3xl sm:text-4xl font-black text-foreground dark:text-white font-sans tracking-tight"
+          >
+            WORKSPACE READY
+          </h2>
+          <p
+            class="text-sm text-muted-foreground dark:text-slate-300 max-w-lg mx-auto leading-relaxed"
+          >
+            Your institutional climate intelligence console is fully synchronized. Continuous
+            orbital surveillance across Sentinel-1 SAR and Sentinel-2 optical is nominal.
+          </p>
+        </div>
+
+        <div
+          class="p-4 rounded-2xl bg-muted/50 dark:bg-black/40 border border-border/70 dark:border-white/10 max-w-md mx-auto grid grid-cols-3 gap-2 font-mono text-xs"
+        >
+          <div>
+            <span class="text-[10px] text-muted-foreground uppercase block">Workspace</span>
+            <strong class="text-foreground dark:text-white">{{ orgName.split(' ')[0] }}</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-muted-foreground uppercase block">Team</span>
+            <strong class="text-emerald-600 dark:text-emerald-400"
+              >{{ teamMembers.length }} Members</strong
+            >
+          </div>
+          <div>
+            <span class="text-[10px] text-muted-foreground uppercase block">Telemetry</span>
+            <strong class="text-cyan-600 dark:text-cyan-400">Active</strong>
+          </div>
+        </div>
+
+        <div class="pt-4">
+          <Button
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-mono uppercase tracking-widest font-black text-sm px-8 py-3.5 shadow-2xl shadow-emerald-500/30 hover:scale-105 transition-transform"
+            @click="finishOnboarding"
+          >
+            ENTER COMMAND CENTER
+          </Button>
+        </div>
       </CardContent>
     </Card>
   </div>

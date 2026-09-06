@@ -1,214 +1,249 @@
 <script setup lang="ts">
-import { Menu, Orbit } from '@lucide/vue';
-import { ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Bell, Building2, ChevronDown, Menu, Moon, Search, Sun } from 'lucide-vue-next';
 import type { ThemeMode } from '../config/theme';
-import type { NavItem } from '../constants/navigation';
-import { APP_HEADER_CONSTANTS, themeOptions } from '@/constants';
+import { APP_HEADER_CONSTANTS } from '@/constants';
 import Button from '@/components/ui/button/Button.vue';
-import Card from '@/components/ui/card/Card.vue';
-import CardContent from '@/components/ui/card/CardContent.vue';
-import Sheet from '@/components/ui/sheet/Sheet.vue';
-import SheetContent from '@/components/ui/sheet/SheetContent.vue';
+import { useCarbonDossier } from '@/composables/useCarbonDossier';
+import { LIVE_RISK_REPORTS } from '@/data/carbonData';
 
-defineProps<{
-  immersive: boolean;
-  pageTitle: string;
-  pageDescription: string;
-  primaryNavItems: NavItem[];
+const props = defineProps<{
+  immersive?: boolean;
+  pageTitle?: string;
+  pageDescription?: string;
   themeMode: ThemeMode;
 }>();
 
 const emit = defineEmits<{
   'update:themeMode': [value: ThemeMode];
+  toggleMobileNav: [];
 }>();
 
-const mobileNavOpen = ref(false);
+const isDark = computed(() => props.themeMode === 'dark');
+
+const toggleTheme = () => {
+  emit('update:themeMode', isDark.value ? 'light' : 'dark');
+};
+
+const { globalSearchOpen, openProjectDossier } = useCarbonDossier();
+
+const currentWorkspace = ref('Global Carbon Assets • Enterprise');
+const workspaceDropdownOpen = ref(false);
+const alertsPopoverOpen = ref(false);
+
+const workspaces = APP_HEADER_CONSTANTS.workspaces;
+
+// Live UTC clock
+const currentUtcTime = ref('18:42:16 UTC');
+let clockTimer: ReturnType<typeof setInterval> | null = null;
+
+const updateClock = () => {
+  const now = new Date();
+  const hours = String(now.getUTCHours()).padStart(2, '0');
+  const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+  currentUtcTime.value = `${hours}:${minutes}:${seconds} UTC`;
+};
+
+onMounted(() => {
+  updateClock();
+  clockTimer = setInterval(updateClock, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (clockTimer) clearInterval(clockTimer);
+});
 </script>
 
 <template>
-  <Card
-    :class="[
-      'border-border/80 bg-background/84 z-20 backdrop-blur-2xl',
-      immersive
-        ? 'mx-3 mt-3 rounded-[1.25rem] shadow-[0_18px_48px_rgba(15,23,42,0.16)] sm:mx-6 sm:mt-4 sm:rounded-[1.5rem] lg:mx-8'
-        : 'rounded-[1.25rem] shadow-[0_20px_56px_rgba(15,23,42,0.12)] sm:rounded-[1.5rem]',
-    ]"
+  <header
+    class="sticky top-0 z-30 w-full border-b border-border/70 dark:border-white/10 bg-background/85 dark:bg-[#050d0a]/90 backdrop-blur-xl transition-all duration-300"
   >
-    <CardContent :class="immersive ? 'p-3 sm:p-4 lg:p-5' : 'p-3 sm:p-4 lg:p-5'">
-      <div class="flex items-center justify-between gap-2 sm:gap-4">
-        <RouterLink to="/" class="group flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <div
-            :class="[
-              'grid shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 via-cyan-300 to-sky-200 text-slate-950 shadow-[0_12px_30px_rgba(16,185,129,0.35)] transition-all duration-300 group-hover:shadow-[0_14px_34px_rgba(16,185,129,0.5)] group-hover:scale-105',
-              immersive ? 'h-9 w-9 sm:h-10 sm:w-10' : 'h-9 w-9 sm:h-11 sm:w-11',
-            ]"
-          >
-            <Orbit class="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-700 ease-out group-hover:rotate-180" />
-          </div>
-
-          <div class="min-w-0">
-            <p
-              class="hidden text-[0.6rem] font-bold tracking-[0.22em] text-emerald-600 uppercase dark:text-emerald-400 sm:block"
-            >
-              {{ APP_HEADER_CONSTANTS.eyebrow }}
-            </p>
-            <h1
-              :class="[
-                'text-foreground truncate font-black tracking-[-0.04em] transition-colors duration-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
-                immersive ? 'text-base sm:text-xl' : 'text-lg sm:text-2xl',
-              ]"
-            >
-              {{ APP_HEADER_CONSTANTS.brand }}
-            </h1>
-          </div>
-        </RouterLink>
-
-        <nav
-          class="hidden flex-1 items-center justify-center gap-1.5 px-3 xl:flex"
-          :aria-label="APP_HEADER_CONSTANTS.navAriaLabel"
+    <div class="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+      <!-- Left side: Mobile trigger & Workspace Selector -->
+      <div class="flex items-center gap-3">
+        <!-- Mobile Sidebar Toggle -->
+        <button
+          type="button"
+          class="lg:hidden h-8 w-8 rounded-lg border border-border/70 dark:border-white/10 text-muted-foreground hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-white/10 flex items-center justify-center transition"
+          aria-label="Toggle navigation menu"
+          @click="emit('toggleMobileNav')"
         >
-          <RouterLink
-            v-for="item in primaryNavItems"
-            :key="item.to"
-            :to="item.to"
-            :class="[
-              'rounded-full border text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0',
-              item.to === APP_HEADER_CONSTANTS.briefingTo
-                ? 'border-emerald-500/40 bg-emerald-500/10 px-4 py-2 font-semibold text-emerald-700 hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:shadow-sm dark:text-emerald-300'
-                : 'border-transparent bg-muted/40 px-3 py-2 text-muted-foreground hover:border-emerald-500/30 hover:bg-muted/80 hover:text-foreground hover:shadow-xs',
-            ]"
-            active-class="!border-emerald-500/40 !bg-emerald-500/15 !text-emerald-700 dark:!text-emerald-300 font-semibold shadow-xs"
-            exact-active-class="!border-emerald-500/40 !bg-emerald-500/15 !text-emerald-700 dark:!text-emerald-300 font-semibold shadow-xs"
+          <Menu class="h-4 w-4" />
+        </button>
+
+        <!-- Workspace Selector Dropdown -->
+        <div class="relative">
+          <button
+            type="button"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-900/60 hover:bg-card dark:hover:bg-slate-900 hover:border-emerald-500/40 text-xs font-mono text-foreground dark:text-slate-200 transition shadow-xs"
+            @click="workspaceDropdownOpen = !workspaceDropdownOpen"
           >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
+            <Building2 class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span class="max-w-[140px] sm:max-w-[220px] truncate font-semibold">{{
+              currentWorkspace
+            }}</span>
+            <ChevronDown class="h-3 w-3 text-muted-foreground" />
+          </button>
 
-
-        <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <!-- Desktop/tablet multi-option pill -->
           <div
-            class="border-border/80 bg-muted/60 hidden items-center gap-1 rounded-full border p-1 backdrop-blur-md sm:inline-flex"
+            v-if="workspaceDropdownOpen"
+            class="absolute top-10 left-0 w-64 p-1 rounded-xl border border-border dark:border-white/15 bg-popover dark:bg-slate-950 shadow-2xl text-xs font-mono z-50 backdrop-blur-2xl text-foreground"
           >
-            <Button
-              v-for="option in themeOptions"
-              :key="option.value"
-              type="button"
-              variant="ghost"
-              size="icon"
-              :aria-label="option.label"
-              :title="option.label"
-              :class="[
-                'h-8 w-8 rounded-full transition-all duration-200',
-                themeMode === option.value
-                  ? 'bg-background text-foreground ring-border/80 shadow-sm ring-1'
-                  : 'text-muted-foreground hover:text-foreground',
-              ]"
-              @click="emit('update:themeMode', option.value)"
+            <div
+              class="p-2 border-b border-border/70 dark:border-white/10 text-[10px] text-muted-foreground uppercase tracking-wider"
             >
-              <component :is="option.icon" class="h-4 w-4" />
-            </Button>
-          </div>
-
-          <!-- Mobile single theme toggle button -->
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            class="border-border/80 bg-muted/60 text-foreground h-9 w-9 rounded-full sm:hidden"
-            :aria-label="`Current theme: ${themeMode}. Tap to change`"
-            :title="`Theme: ${themeMode}`"
-            @click="
-              emit(
-                'update:themeMode',
-                themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light',
-              )
-            "
-          >
-            <component
-              :is="themeOptions.find((o) => o.value === themeMode)?.icon || themeOptions[0].icon"
-              class="h-4 w-4"
-            />
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            class="border-border/80 bg-muted/60 text-foreground h-9 w-9 rounded-full xl:hidden"
-            aria-label="Open menu"
-            @click="mobileNavOpen = true"
-          >
-            <Menu class="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-
-  <Sheet :open="mobileNavOpen" @update:open="mobileNavOpen = $event">
-    <SheetContent
-      class="border-border/80 bg-card/95 text-card-foreground flex h-full max-h-[100dvh] flex-col overflow-y-auto p-5 backdrop-blur-2xl sm:p-6"
-    >
-      <div class="space-y-5">
-        <div>
-          <p
-            class="text-[0.64rem] font-bold tracking-[0.24em] text-emerald-600 uppercase dark:text-emerald-400"
-          >
-            {{ APP_HEADER_CONSTANTS.mobileNavTitle }}
-          </p>
-          <h2 class="mt-2 text-xl font-black text-foreground">
-            {{ APP_HEADER_CONSTANTS.brand }}
-          </h2>
-          <p class="mt-1.5 text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6">
-            {{ pageDescription }}
-          </p>
-        </div>
-
-        <div class="space-y-2">
-          <p class="text-[0.68rem] font-bold tracking-[0.16em] text-muted-foreground uppercase">
-            {{ APP_HEADER_CONSTANTS.themePreferenceLabel }}
-          </p>
-          <div
-            class="border-border/80 bg-muted/60 grid grid-cols-3 gap-1 rounded-2xl border p-1 backdrop-blur-md"
-          >
+              Switch Monitored Workspace
+            </div>
             <button
-              v-for="option in themeOptions"
-              :key="option.value"
+              v-for="ws in workspaces"
+              :key="ws"
               type="button"
-              :class="[
-                'inline-flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-all',
-                themeMode === option.value
-                  ? 'bg-background text-foreground ring-border/80 shadow-xs ring-1'
-                  : 'text-muted-foreground hover:text-foreground',
-              ]"
-              @click="emit('update:themeMode', option.value)"
+              class="w-full text-left p-2 rounded-lg hover:bg-muted dark:hover:bg-white/10 transition"
+              :class="
+                currentWorkspace === ws
+                  ? 'text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/10'
+                  : 'text-foreground/80 dark:text-slate-300'
+              "
+              @click="
+                currentWorkspace = ws;
+                workspaceDropdownOpen = false;
+              "
             >
-              <component :is="option.icon" class="h-3.5 w-3.5" />
-              <span>{{ option.label }}</span>
+              {{ ws }}
             </button>
           </div>
         </div>
-
-        <nav class="grid gap-2" :aria-label="APP_HEADER_CONSTANTS.mobileNavAriaLabel">
-          <RouterLink
-            v-for="item in primaryNavItems"
-            :key="item.to"
-            :to="item.to"
-            :class="[
-              'rounded-2xl border px-4 py-3 text-sm font-medium transition-all duration-200',
-              item.to === APP_HEADER_CONSTANTS.briefingTo
-                ? 'border-emerald-500/40 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300'
-                : 'border-border/70 bg-muted/50 text-foreground hover:border-emerald-500/40 hover:bg-muted/80',
-            ]"
-            @click="mobileNavOpen = false"
-          >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
-
       </div>
-    </SheetContent>
-  </Sheet>
+
+      <!-- Center: Global Quick Search Button -->
+      <div class="flex-1 max-w-md hidden md:block">
+        <button
+          type="button"
+          class="w-full h-9 px-3 rounded-xl border border-border/70 dark:border-white/10 bg-muted/50 dark:bg-slate-900/40 hover:bg-card dark:hover:bg-slate-900/80 hover:border-emerald-500/40 text-xs text-muted-foreground flex items-center justify-between transition group font-mono shadow-xs"
+          @click="globalSearchOpen = true"
+        >
+          <span class="flex items-center gap-2">
+            <Search
+              class="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition"
+            />
+            <span>Search projects, buyers, registries...</span>
+          </span>
+          <span
+            class="border border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-muted-foreground"
+          >
+            ⌘K
+          </span>
+        </button>
+      </div>
+
+      <!-- Right Side: Telemetry Readout, Alerts, Theme, Avatar -->
+      <div class="flex items-center gap-2.5">
+        <!-- Satellite Telemetry Badge -->
+        <div
+          class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-mono text-xs"
+        >
+          <span class="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping"></span>
+          <div class="text-left leading-tight">
+            <div
+              class="text-[9px] uppercase tracking-wider text-emerald-700/80 dark:text-emerald-400/70 font-bold"
+            >
+              SATELLITE FEED NOMINAL
+            </div>
+            <div class="text-[10px] text-foreground dark:text-white font-bold">
+              LAST SYNC {{ currentUtcTime }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Search Button (Mobile/Tablet) -->
+        <button
+          type="button"
+          class="md:hidden h-8 w-8 rounded-lg border border-border/70 dark:border-white/10 text-muted-foreground hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-white/10 flex items-center justify-center transition"
+          aria-label="Open global search"
+          @click="globalSearchOpen = true"
+        >
+          <Search class="h-4 w-4" />
+        </button>
+
+        <!-- Active Alerts Popover Button -->
+        <div class="relative">
+          <button
+            type="button"
+            class="h-8 px-2.5 rounded-lg border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-mono font-bold flex items-center gap-1.5 transition"
+            @click="alertsPopoverOpen = !alertsPopoverOpen"
+          >
+            <Bell class="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
+            <span>17</span>
+            <span class="hidden sm:inline text-[10px] text-rose-600 dark:text-rose-400 font-normal"
+              >(3 Critical)</span
+            >
+          </button>
+
+          <!-- Alerts Dropdown -->
+          <div
+            v-if="alertsPopoverOpen"
+            class="absolute right-0 top-10 w-80 p-2 rounded-xl border border-border dark:border-white/15 bg-popover dark:bg-slate-950 shadow-2xl text-xs font-mono z-50 backdrop-blur-2xl text-foreground"
+          >
+            <div
+              class="p-2 border-b border-border/70 dark:border-white/10 flex items-center justify-between text-[11px]"
+            >
+              <span class="font-bold text-rose-600 dark:text-rose-400">17 ACTIVE RISK ALERTS</span>
+              <span class="text-muted-foreground text-[10px]">Real-time feed</span>
+            </div>
+            <div class="py-1 max-h-64 overflow-y-auto space-y-1">
+              <div
+                v-for="alert in LIVE_RISK_REPORTS.slice(0, 3)"
+                :key="alert.id"
+                class="p-2 rounded-lg hover:bg-muted dark:hover:bg-white/5 cursor-pointer"
+                @click="
+                  alertsPopoverOpen = false;
+                  openProjectDossier(alert.projectOrBuyer);
+                "
+              >
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-rose-600 dark:text-rose-400 font-bold uppercase">{{
+                    alert.type
+                  }}</span>
+                  <span class="text-muted-foreground">{{ alert.timeAgo }}</span>
+                </div>
+                <div
+                  class="text-foreground dark:text-slate-200 font-sans text-xs mt-0.5 font-medium"
+                >
+                  {{ alert.title }} • {{ alert.projectOrBuyer }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Theme Toggle: Single button to toggle between dark and light -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+          :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+          class="h-8 w-8 rounded-lg border border-border/70 dark:border-white/10 bg-muted/60 dark:bg-slate-900/60 hover:bg-card dark:hover:bg-slate-800 text-foreground dark:text-slate-200 transition shadow-xs flex items-center justify-center cursor-pointer"
+          @click="toggleTheme"
+        >
+          <Sun
+            v-if="isDark"
+            class="h-4 w-4 text-amber-400 hover:text-amber-300 transition-transform duration-200 hover:rotate-45"
+          />
+          <Moon
+            v-else
+            class="h-4 w-4 text-slate-700 dark:text-slate-300 transition-transform duration-200 hover:-rotate-12"
+          />
+        </Button>
+
+        <!-- User Avatar -->
+        <div
+          class="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs flex items-center justify-center shrink-0"
+        >
+          EV
+        </div>
+      </div>
+    </div>
+  </header>
 </template>

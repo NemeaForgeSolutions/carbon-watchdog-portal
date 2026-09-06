@@ -41,10 +41,15 @@ const resetPointer = () => {
       class="relative z-10 grid min-h-[76vh] items-center gap-6 sm:gap-8 p-3.5 sm:p-6 lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[minmax(320px,0.42fr)_minmax(0,1fr)] lg:p-8"
     >
       <article
-        class="cw-animate-in rounded-[1.25rem] sm:rounded-[1.5rem] border border-white/10 bg-slate-950/62 p-5 sm:p-7 backdrop-blur-xl shadow-2xl"
+        class="cw-animate-in rounded-[1.25rem] sm:rounded-[1.5rem] border border-border/70 dark:border-white/10 bg-card/90 dark:bg-slate-950/62 p-5 sm:p-7 backdrop-blur-xl shadow-2xl"
       >
-        <p class="m-0 text-[0.66rem] font-bold tracking-[0.28em] text-emerald-400 uppercase inline-flex items-center gap-2">
-          <span class="cw-radar-dot h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>
+        <p
+          class="m-0 text-[0.66rem] font-bold tracking-[0.28em] text-emerald-700 dark:text-emerald-400 uppercase inline-flex items-center gap-2"
+        >
+          <span
+            class="cw-radar-dot h-1.5 w-1.5 rounded-full bg-emerald-500"
+            aria-hidden="true"
+          ></span>
           Route integrity alert
         </p>
         <h2
@@ -62,7 +67,8 @@ const resetPointer = () => {
           Requested path:
           <span
             class="ml-1 sm:ml-2 inline-block rounded-full border border-[var(--chip-border)] bg-[var(--chip-bg)] px-2.5 py-1 font-mono text-[0.76rem] sm:text-[0.8rem] text-[var(--title)] break-all"
-          >{{ attemptedPath }}</span>
+            >{{ attemptedPath }}</span
+          >
         </p>
 
         <div class="mt-4 flex flex-wrap gap-2 sm:gap-2.5">
@@ -70,7 +76,7 @@ const resetPointer = () => {
             v-for="link in recoveryLinks"
             :key="link.to"
             :to="link.to"
-            class="rounded-full border border-white/10 bg-white/6 px-3.5 py-2 text-xs sm:text-sm font-bold text-white no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-400/50 hover:bg-emerald-500/10 active:scale-95 focus-visible:shadow-[var(--focus-ring)]"
+            class="rounded-full border border-border/70 dark:border-white/10 bg-secondary dark:bg-white/6 px-3.5 py-2 text-xs sm:text-sm font-bold text-secondary-foreground dark:text-white no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-500/50 hover:bg-emerald-500/10 active:scale-95 focus-visible:shadow-[var(--focus-ring)]"
           >
             {{ link.label }}
           </RouterLink>
@@ -101,8 +107,15 @@ const resetPointer = () => {
                 gradientUnits="userSpaceOnUse"
                 gradientTransform="translate(650 442) rotate(90) scale(360 360)"
               >
-                <stop stop-color="#22C55E" stop-opacity="0.28" />
-                <stop offset="1" stop-color="#22C55E" stop-opacity="0" />
+                <stop
+                  stop-color="#22C55E"
+                  stop-opacity="0.28"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#22C55E"
+                  stop-opacity="0"
+                />
               </radialGradient>
               <radialGradient
                 id="nfCore"
@@ -113,9 +126,18 @@ const resetPointer = () => {
                 gradientTransform="translate(650 442) rotate(90) scale(210 210)"
               >
                 <stop stop-color="#ECFDF5" />
-                <stop offset="0.2" stop-color="#86EFAC" />
-                <stop offset="0.56" stop-color="#14532D" />
-                <stop offset="1" stop-color="#020617" />
+                <stop
+                  offset="0.2"
+                  stop-color="#86EFAC"
+                />
+                <stop
+                  offset="0.56"
+                  stop-color="#14532D"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#020617"
+                />
               </radialGradient>
             </defs>
 
@@ -262,7 +284,9 @@ const resetPointer = () => {
                     y="33"
                     fill="#94A3B8"
                     font-size="10"
-                  >Portfolio map</text>
+                  >
+                    Portfolio map
+                  </text>
                 </g>
               </g>
             </g>
@@ -317,7 +341,9 @@ const resetPointer = () => {
                     y="33"
                     fill="#94A3B8"
                     font-size="10"
-                  >Registry trace</text>
+                  >
+                    Registry trace
+                  </text>
                 </g>
               </g>
             </g>
@@ -371,7 +397,9 @@ const resetPointer = () => {
                     y="33"
                     fill="#94A3B8"
                     font-size="10"
-                  >Integrity drift</text>
+                  >
+                    Integrity drift
+                  </text>
                 </g>
               </g>
             </g>
@@ -426,7 +454,9 @@ const resetPointer = () => {
                     y="33"
                     fill="#94A3B8"
                     font-size="10"
-                  >Review chain</text>
+                  >
+                    Review chain
+                  </text>
                 </g>
               </g>
             </g>

@@ -135,6 +135,17 @@ export default createRouter({
       },
     },
     {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('./pages/SettingsPage.vue'),
+      meta: {
+        title: 'Settings',
+        theme: 'forest',
+        description:
+          'Configure workspace parameters, alert thresholds, team RBAC, and telemetry feeds.',
+      },
+    },
+    {
       path: '/pricing',
       name: 'pricing',
       component: () => import('./pages/PricingPage.vue'),

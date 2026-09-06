@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { CARBON_ORBIT_CONSTANTS } from '@/constants';
+import { useTheme } from '@/composables/useTheme';
+
+const { isDark } = useTheme();
 
 const orbitBadges = CARBON_ORBIT_CONSTANTS.badges;
-
 
 type OrbitStat = {
   label: string;
@@ -45,64 +47,90 @@ const resetPointer = () => {
 
 <template>
   <section
-    class="orbit-shell relative overflow-hidden rounded-[2rem] border border-slate-400/20 shadow-[0_30px_80px_rgba(2,8,6,0.28)]"
+    class="orbit-shell relative overflow-hidden rounded-3xl border border-border/70 dark:border-white/10 shadow-xl dark:shadow-2xl transition-colors duration-300"
   >
     <div class="orbit-background absolute inset-0"></div>
     <div class="orbit-noise absolute inset-0 opacity-40"></div>
 
     <div
-      class="relative z-10 grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch lg:p-8 xl:p-10"
+      class="relative z-10 grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch lg:p-7 xl:p-8"
     >
+      <!-- Left: Telemetry & Narrative Card -->
       <div
-        class="flex h-full flex-col justify-between rounded-[1.5rem] border border-white/10 bg-slate-950/58 p-5 backdrop-blur-xl sm:rounded-[1.75rem] sm:p-6 lg:p-7 xl:p-8"
+        class="flex h-full flex-col justify-between rounded-2xl border border-border/70 dark:border-white/10 bg-card/85 dark:bg-slate-950/60 p-5 sm:p-6 lg:p-7 backdrop-blur-xl shadow-md sm:rounded-3xl transition-colors"
       >
-        <p class="m-0 text-[0.7rem] font-extrabold tracking-[0.28em] text-emerald-300 uppercase">
-          {{ props.eyebrow }}
-        </p>
-        <h2
-          class="m-0 mt-3 sm:mt-4 max-w-[14ch] text-[clamp(1.85rem,5.5vw,5.2rem)] leading-[0.96] sm:leading-[0.92] tracking-[-0.05em] text-white"
-        >
-          {{ props.title }}
-        </h2>
-        <p class="m-0 mt-3 sm:mt-4 max-w-[58ch] text-sm sm:text-base leading-6 sm:leading-7 text-emerald-50/82 lg:text-lg">
-          {{ props.description }}
-        </p>
+        <div>
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider text-emerald-700 dark:text-emerald-300 uppercase"
+            >
+              <span
+                class="cw-radar-dot h-1.5 w-1.5 rounded-full bg-emerald-500"
+                aria-hidden="true"
+              ></span>
+              {{ props.eyebrow }}
+            </span>
+          </div>
 
+          <h2
+            class="m-0 mt-3 sm:mt-4 max-w-[15ch] text-2xl sm:text-3xl lg:text-4xl xl:text-[2.65rem] leading-[1.06] sm:leading-[1.02] tracking-tight font-black font-sans text-foreground dark:text-white"
+          >
+            {{ props.title }}
+          </h2>
+
+          <p
+            class="m-0 mt-3 sm:mt-4 max-w-[58ch] text-xs sm:text-sm lg:text-base leading-relaxed text-muted-foreground dark:text-slate-300"
+          >
+            {{ props.description }}
+          </p>
+        </div>
+
+        <!-- Telemetry Stats Grid -->
         <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
           <div
             v-for="(stat, index) in props.stats"
             :key="stat.label"
             :class="[
-              'grid gap-1.5 sm:gap-2 rounded-[1.15rem] border border-white/10 bg-white/[0.06] p-3.5 sm:p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm',
+              'grid gap-1 rounded-xl sm:rounded-2xl border border-border/70 dark:border-white/10 bg-muted/40 dark:bg-white/[0.04] p-3 sm:p-3.5 shadow-2xs backdrop-blur-sm transition-colors hover:border-emerald-500/30',
               index === 2 && props.stats.length === 3 ? 'col-span-2 sm:col-span-1' : '',
             ]"
           >
-            <span class="text-[0.66rem] sm:text-[0.68rem] font-bold tracking-[0.16em] text-emerald-300 uppercase">{{
-              stat.label
-            }}</span>
-            <strong class="text-xl sm:text-2xl font-black text-white">{{ stat.value }}</strong>
+            <span
+              class="text-[10px] sm:text-[11px] font-mono font-bold tracking-wider text-emerald-700 dark:text-emerald-300 uppercase truncate"
+            >
+              {{ stat.label }}
+            </span>
+            <strong
+              class="text-lg sm:text-xl font-black font-mono tracking-tight text-foreground dark:text-white"
+            >
+              {{ stat.value }}
+            </strong>
           </div>
         </div>
 
+        <!-- Sensor Coverage Strip -->
         <div class="mt-5 sm:mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           <div
             v-for="badge in orbitBadges"
             :key="badge.label"
-            class="rounded-[1.15rem] border border-white/10 bg-slate-900/52 p-3 sm:px-4 sm:py-3 backdrop-blur-sm"
+            class="rounded-xl border border-border/60 dark:border-white/10 bg-card/60 dark:bg-slate-900/50 p-2.5 sm:px-3 sm:py-2.5 backdrop-blur-sm transition-colors hover:border-emerald-500/40"
           >
-            <p class="text-[0.64rem] sm:text-[0.66rem] font-bold tracking-[0.14em] text-emerald-300 uppercase">
+            <p
+              class="text-[10px] font-mono font-bold tracking-wider text-emerald-700 dark:text-emerald-400 uppercase truncate"
+            >
               {{ badge.label }}
             </p>
-            <p class="mt-1 text-xs sm:text-sm text-slate-200">
+            <p class="mt-0.5 text-xs font-semibold text-foreground/85 dark:text-slate-300 truncate">
               {{ badge.value }}
             </p>
           </div>
         </div>
       </div>
 
+      <!-- Right: Interactive 3D Orbital Scene -->
       <div
         ref="sceneRef"
-        class="orbit-scene relative aspect-[4/3] min-h-[260px] rounded-[1.5rem] border border-white/10 bg-white/[0.03] sm:aspect-[16/10] sm:min-h-[360px] sm:rounded-[1.75rem] lg:aspect-auto lg:min-h-[520px]"
+        class="orbit-scene relative aspect-[4/3] min-h-[280px] rounded-2xl sm:rounded-3xl border border-border/70 dark:border-white/10 bg-card/40 dark:bg-slate-950/40 sm:aspect-[16/10] sm:min-h-[380px] lg:aspect-auto lg:min-h-[500px] backdrop-blur-xl shadow-inner overflow-hidden"
         :style="sceneStyle"
         aria-hidden="true"
         @pointermove="onPointerMove"
@@ -116,19 +144,73 @@ const resetPointer = () => {
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
+              <!-- Atmospheric Glow (Light & Dark Variants) -->
               <radialGradient
-                id="cwGlow"
+                id="cwGlowLight"
                 cx="0"
                 cy="0"
                 r="1"
                 gradientUnits="userSpaceOnUse"
-                gradientTransform="translate(650 450) rotate(90) scale(340 340)"
+                gradientTransform="translate(650 430) rotate(90) scale(330 330)"
               >
-                <stop stop-color="#34D399" stop-opacity="0.34" />
-                <stop offset="1" stop-color="#34D399" stop-opacity="0" />
+                <stop
+                  stop-color="#10B981"
+                  stop-opacity="0.25"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#10B981"
+                  stop-opacity="0"
+                />
               </radialGradient>
               <radialGradient
-                id="cwPlanet"
+                id="cwGlowDark"
+                cx="0"
+                cy="0"
+                r="1"
+                gradientUnits="userSpaceOnUse"
+                gradientTransform="translate(650 430) rotate(90) scale(340 340)"
+              >
+                <stop
+                  stop-color="#34D399"
+                  stop-opacity="0.34"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#34D399"
+                  stop-opacity="0"
+                />
+              </radialGradient>
+
+              <!-- Planetary Body Gradient (Theme Adaptive) -->
+              <radialGradient
+                id="cwPlanetLight"
+                cx="0"
+                cy="0"
+                r="1"
+                gradientUnits="userSpaceOnUse"
+                gradientTransform="translate(650 420) rotate(90) scale(230 230)"
+              >
+                <stop stop-color="#F0FDF4" />
+                <stop
+                  offset="0.22"
+                  stop-color="#A7F3D0"
+                />
+                <stop
+                  offset="0.52"
+                  stop-color="#0D9488"
+                />
+                <stop
+                  offset="0.85"
+                  stop-color="#065F46"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#064E3B"
+                />
+              </radialGradient>
+              <radialGradient
+                id="cwPlanetDark"
                 cx="0"
                 cy="0"
                 r="1"
@@ -136,21 +218,58 @@ const resetPointer = () => {
                 gradientTransform="translate(650 430) rotate(90) scale(230 230)"
               >
                 <stop stop-color="#F0FDFA" />
-                <stop offset="0.18" stop-color="#99F6E4" />
-                <stop offset="0.48" stop-color="#0F766E" />
-                <stop offset="1" stop-color="#020617" />
+                <stop
+                  offset="0.18"
+                  stop-color="#99F6E4"
+                />
+                <stop
+                  offset="0.48"
+                  stop-color="#0F766E"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#020617"
+                />
               </radialGradient>
+
+              <!-- Radar Sweep Beam (Theme Adaptive) -->
               <linearGradient
-                id="cwBeam"
+                id="cwBeamLight"
                 x1="274"
                 y1="184"
                 x2="898"
                 y2="676"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop stop-color="#67E8F9" stop-opacity="0.4" />
-                <stop offset="1" stop-color="#34D399" stop-opacity="0.02" />
+                <stop
+                  stop-color="#0284C7"
+                  stop-opacity="0.24"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#10B981"
+                  stop-opacity="0.02"
+                />
               </linearGradient>
+              <linearGradient
+                id="cwBeamDark"
+                x1="274"
+                y1="184"
+                x2="898"
+                y2="676"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop
+                  stop-color="#67E8F9"
+                  stop-opacity="0.4"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#34D399"
+                  stop-opacity="0.02"
+                />
+              </linearGradient>
+
               <linearGradient
                 id="cwArc"
                 x1="0"
@@ -158,8 +277,15 @@ const resetPointer = () => {
                 x2="1"
                 y2="1"
               >
-                <stop stop-color="#E2E8F0" stop-opacity="0.7" />
-                <stop offset="1" stop-color="#34D399" stop-opacity="0.2" />
+                <stop
+                  stop-color="#94A3B8"
+                  stop-opacity="0.6"
+                />
+                <stop
+                  offset="1"
+                  stop-color="#10B981"
+                  stop-opacity="0.25"
+                />
               </linearGradient>
               <filter
                 id="cwBlur"
@@ -174,92 +300,96 @@ const resetPointer = () => {
               </filter>
             </defs>
 
+            <!-- Ground shadow field -->
             <g class="field field-back">
               <ellipse
                 cx="650"
                 cy="690"
                 rx="360"
                 ry="62"
-                fill="#020617"
-                fill-opacity="0.56"
+                :fill="isDark ? '#020617' : '#64748B'"
+                :fill-opacity="isDark ? 0.56 : 0.12"
               />
               <ellipse
                 cx="650"
                 cy="700"
                 rx="296"
                 ry="44"
-                fill="#0F172A"
-                fill-opacity="0.44"
+                :fill="isDark ? '#0F172A' : '#334155'"
+                :fill-opacity="isDark ? 0.44 : 0.08"
               />
             </g>
 
+            <!-- Coordinate Mesh Grid -->
             <g class="mesh-grid">
               <path
                 d="M130 676C256 598 430 546 646 546C862 546 1036 598 1162 676"
                 stroke="#94A3B8"
-                stroke-opacity="0.15"
+                :stroke-opacity="isDark ? 0.15 : 0.22"
                 stroke-width="2"
               />
               <path
                 d="M172 726C298 640 446 598 646 598C846 598 994 640 1120 726"
                 stroke="#94A3B8"
-                stroke-opacity="0.11"
+                :stroke-opacity="isDark ? 0.11 : 0.18"
                 stroke-width="2"
               />
               <path
                 d="M240 770C360 690 490 648 646 648C802 648 932 690 1052 770"
                 stroke="#94A3B8"
-                stroke-opacity="0.08"
+                :stroke-opacity="isDark ? 0.08 : 0.14"
                 stroke-width="2"
               />
               <path
                 d="M410 552L330 762"
                 stroke="#94A3B8"
-                stroke-opacity="0.08"
+                :stroke-opacity="isDark ? 0.08 : 0.14"
                 stroke-width="2"
               />
               <path
                 d="M542 536L486 790"
                 stroke="#94A3B8"
-                stroke-opacity="0.08"
+                :stroke-opacity="isDark ? 0.08 : 0.14"
                 stroke-width="2"
               />
               <path
                 d="M758 536L812 790"
                 stroke="#94A3B8"
-                stroke-opacity="0.08"
+                :stroke-opacity="isDark ? 0.08 : 0.14"
                 stroke-width="2"
               />
               <path
                 d="M892 552L972 762"
                 stroke="#94A3B8"
-                stroke-opacity="0.08"
+                :stroke-opacity="isDark ? 0.08 : 0.14"
                 stroke-width="2"
               />
             </g>
 
+            <!-- Radar Sensor Sweeps -->
             <g class="beam-layer">
               <path
                 d="M210 208L670 420L1080 714"
-                stroke="url(#cwBeam)"
+                :stroke="isDark ? 'url(#cwBeamDark)' : 'url(#cwBeamLight)'"
                 stroke-width="28"
                 stroke-linecap="round"
               />
               <path
                 d="M280 232L672 420L980 680"
-                stroke="#E2E8F0"
-                stroke-opacity="0.06"
+                :stroke="isDark ? '#E2E8F0' : '#64748B'"
+                :stroke-opacity="isDark ? 0.06 : 0.16"
                 stroke-width="2"
                 stroke-dasharray="8 12"
               />
             </g>
 
+            <!-- Planetary System -->
             <g class="planet-system">
               <circle
                 cx="650"
                 cy="430"
                 r="250"
-                fill="url(#cwGlow)"
+                :fill="isDark ? 'url(#cwGlowDark)' : 'url(#cwGlowLight)'"
                 filter="url(#cwBlur)"
               />
               <ellipse
@@ -268,8 +398,8 @@ const resetPointer = () => {
                 cy="428"
                 rx="286"
                 ry="86"
-                stroke="#34D399"
-                stroke-opacity="0.2"
+                :stroke="isDark ? '#34D399' : '#059669'"
+                :stroke-opacity="isDark ? 0.2 : 0.32"
                 stroke-width="3"
               />
               <ellipse
@@ -278,8 +408,8 @@ const resetPointer = () => {
                 cy="428"
                 rx="242"
                 ry="68"
-                stroke="#7DD3FC"
-                stroke-opacity="0.18"
+                :stroke="isDark ? '#7DD3FC' : '#0284C7'"
+                :stroke-opacity="isDark ? 0.18 : 0.28"
                 stroke-width="2"
               />
               <circle
@@ -287,19 +417,19 @@ const resetPointer = () => {
                 cx="650"
                 cy="430"
                 r="194"
-                fill="url(#cwPlanet)"
+                :fill="isDark ? 'url(#cwPlanetDark)' : 'url(#cwPlanetLight)'"
               />
               <path
                 class="planet-shore"
                 d="M564 356C588 338 630 330 656 346C688 366 728 356 752 382C780 410 760 446 734 464C710 480 692 516 642 516C584 516 540 484 516 446C498 416 518 382 564 356Z"
-                fill="#0B3B3C"
-                fill-opacity="0.58"
+                :fill="isDark ? '#0B3B3C' : '#047857'"
+                :fill-opacity="isDark ? 0.58 : 0.65"
               />
               <path
                 class="planet-shore planet-shore-alt"
                 d="M642 286C678 276 726 294 746 326C768 360 752 398 720 412C686 428 652 418 626 390C598 360 602 302 642 286Z"
-                fill="#86EFAC"
-                fill-opacity="0.18"
+                :fill="isDark ? '#86EFAC' : '#34D399'"
+                :fill-opacity="isDark ? 0.18 : 0.35"
               />
               <ellipse
                 class="equator equator-one"
@@ -316,20 +446,21 @@ const resetPointer = () => {
                 cy="430"
                 rx="118"
                 ry="176"
-                stroke="#E2E8F0"
-                stroke-opacity="0.14"
+                :stroke="isDark ? '#E2E8F0' : '#64748B'"
+                :stroke-opacity="isDark ? 0.14 : 0.25"
                 stroke-width="1.5"
               />
             </g>
 
+            <!-- Orbital Constellation A: Sentinel-2 Optical -->
             <g class="orbital-set orbital-set-a">
               <ellipse
                 cx="650"
                 cy="430"
                 rx="330"
                 ry="138"
-                stroke="#A7F3D0"
-                stroke-opacity="0.18"
+                :stroke="isDark ? '#A7F3D0' : '#059669'"
+                :stroke-opacity="isDark ? 0.18 : 0.3"
                 stroke-width="2"
               />
               <g class="satellite satellite-a">
@@ -344,24 +475,25 @@ const resetPointer = () => {
                   cy="430"
                   r="26"
                   fill="#34D399"
-                  fill-opacity="0.12"
+                  fill-opacity="0.2"
                 />
                 <g transform="translate(1004 406)">
                   <rect
                     width="112"
                     height="44"
                     rx="18"
-                    fill="#020617"
-                    fill-opacity="0.74"
-                    stroke="#94A3B8"
-                    stroke-opacity="0.2"
+                    :fill="isDark ? '#020617' : '#FFFFFF'"
+                    :fill-opacity="isDark ? 0.82 : 0.94"
+                    :stroke="isDark ? '#94A3B8' : '#CBD5E1'"
+                    :stroke-opacity="isDark ? 0.2 : 0.8"
                   />
                   <text
                     x="18"
                     y="19"
-                    fill="#ECFDF5"
+                    :fill="isDark ? '#ECFDF5' : '#047857'"
                     font-size="12"
                     font-weight="700"
+                    font-family="'JetBrains Mono', monospace"
                     letter-spacing="1.5"
                   >
                     {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[0].label }}
@@ -369,21 +501,25 @@ const resetPointer = () => {
                   <text
                     x="18"
                     y="31"
-                    fill="#94A3B8"
+                    :fill="isDark ? '#94A3B8' : '#64748B'"
                     font-size="10"
-                  >{{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[0].desc }}</text>
+                    font-family="'Plus Jakarta Sans', sans-serif"
+                  >
+                    {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[0].desc }}
+                  </text>
                 </g>
               </g>
             </g>
 
+            <!-- Orbital Constellation B: Sentinel-1 Radar -->
             <g class="orbital-set orbital-set-b">
               <ellipse
                 cx="650"
                 cy="430"
                 rx="264"
                 ry="304"
-                stroke="#7DD3FC"
-                stroke-opacity="0.16"
+                :stroke="isDark ? '#7DD3FC' : '#0284C7'"
+                :stroke-opacity="isDark ? 0.16 : 0.28"
                 stroke-width="2"
                 stroke-dasharray="8 12"
               />
@@ -399,24 +535,25 @@ const resetPointer = () => {
                   cy="126"
                   r="22"
                   fill="#38BDF8"
-                  fill-opacity="0.14"
+                  fill-opacity="0.2"
                 />
                 <g transform="translate(678 98)">
                   <rect
                     width="112"
                     height="44"
                     rx="18"
-                    fill="#020617"
-                    fill-opacity="0.74"
-                    stroke="#94A3B8"
-                    stroke-opacity="0.2"
+                    :fill="isDark ? '#020617' : '#FFFFFF'"
+                    :fill-opacity="isDark ? 0.82 : 0.94"
+                    :stroke="isDark ? '#94A3B8' : '#CBD5E1'"
+                    :stroke-opacity="isDark ? 0.2 : 0.8"
                   />
                   <text
                     x="18"
                     y="19"
-                    fill="#ECFDF5"
+                    :fill="isDark ? '#ECFDF5' : '#0369A1'"
                     font-size="12"
                     font-weight="700"
+                    font-family="'JetBrains Mono', monospace"
                     letter-spacing="1.5"
                   >
                     {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[1].label }}
@@ -424,21 +561,25 @@ const resetPointer = () => {
                   <text
                     x="18"
                     y="31"
-                    fill="#94A3B8"
+                    :fill="isDark ? '#94A3B8' : '#64748B'"
                     font-size="10"
-                  >{{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[1].desc }}</text>
+                    font-family="'Plus Jakarta Sans', sans-serif"
+                  >
+                    {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[1].desc }}
+                  </text>
                 </g>
               </g>
             </g>
 
+            <!-- Orbital Constellation C: Buyer Map Exposure -->
             <g class="orbital-set orbital-set-c">
               <ellipse
                 cx="650"
                 cy="430"
                 rx="398"
                 ry="174"
-                stroke="#E2E8F0"
-                stroke-opacity="0.12"
+                :stroke="isDark ? '#E2E8F0' : '#64748B'"
+                :stroke-opacity="isDark ? 0.12 : 0.24"
                 stroke-width="2"
               />
               <g class="satellite satellite-c">
@@ -453,24 +594,25 @@ const resetPointer = () => {
                   cy="430"
                   r="24"
                   fill="#22C55E"
-                  fill-opacity="0.14"
+                  fill-opacity="0.2"
                 />
                 <g transform="translate(92 404)">
                   <rect
                     width="130"
                     height="44"
                     rx="18"
-                    fill="#020617"
-                    fill-opacity="0.74"
-                    stroke="#94A3B8"
-                    stroke-opacity="0.2"
+                    :fill="isDark ? '#020617' : '#FFFFFF'"
+                    :fill-opacity="isDark ? 0.82 : 0.94"
+                    :stroke="isDark ? '#94A3B8' : '#CBD5E1'"
+                    :stroke-opacity="isDark ? 0.2 : 0.8"
                   />
                   <text
                     x="18"
                     y="19"
-                    fill="#ECFDF5"
+                    :fill="isDark ? '#ECFDF5' : '#15803D'"
                     font-size="12"
                     font-weight="700"
+                    font-family="'JetBrains Mono', monospace"
                     letter-spacing="1.5"
                   >
                     {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[2].label }}
@@ -478,21 +620,25 @@ const resetPointer = () => {
                   <text
                     x="18"
                     y="31"
-                    fill="#94A3B8"
+                    :fill="isDark ? '#94A3B8' : '#64748B'"
                     font-size="10"
-                  >{{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[2].desc }}</text>
+                    font-family="'Plus Jakarta Sans', sans-serif"
+                  >
+                    {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[2].desc }}
+                  </text>
                 </g>
               </g>
             </g>
 
+            <!-- Orbital Constellation D: Alert Engine Signal Review -->
             <g class="orbital-set orbital-set-d">
               <ellipse
                 cx="650"
                 cy="430"
                 rx="188"
                 ry="362"
-                stroke="#34D399"
-                stroke-opacity="0.14"
+                :stroke="isDark ? '#34D399' : '#10B981'"
+                :stroke-opacity="isDark ? 0.14 : 0.28"
                 stroke-width="2"
                 stroke-dasharray="6 10"
               />
@@ -508,24 +654,25 @@ const resetPointer = () => {
                   cy="792"
                   r="24"
                   fill="#34D399"
-                  fill-opacity="0.12"
+                  fill-opacity="0.2"
                 />
                 <g transform="translate(676 764)">
                   <rect
                     width="128"
                     height="44"
                     rx="18"
-                    fill="#020617"
-                    fill-opacity="0.74"
-                    stroke="#94A3B8"
-                    stroke-opacity="0.2"
+                    :fill="isDark ? '#020617' : '#FFFFFF'"
+                    :fill-opacity="isDark ? 0.82 : 0.94"
+                    :stroke="isDark ? '#94A3B8' : '#CBD5E1'"
+                    :stroke-opacity="isDark ? 0.2 : 0.8"
                   />
                   <text
                     x="18"
                     y="19"
-                    fill="#ECFDF5"
+                    :fill="isDark ? '#ECFDF5' : '#047857'"
                     font-size="12"
                     font-weight="700"
+                    font-family="'JetBrains Mono', monospace"
                     letter-spacing="1.5"
                   >
                     {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[3].label }}
@@ -533,13 +680,15 @@ const resetPointer = () => {
                   <text
                     x="18"
                     y="31"
-                    fill="#94A3B8"
+                    :fill="isDark ? '#94A3B8' : '#64748B'"
                     font-size="10"
-                  >{{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[3].desc }}</text>
+                    font-family="'Plus Jakarta Sans', sans-serif"
+                  >
+                    {{ CARBON_ORBIT_CONSTANTS.telemetryFeeds[3].desc }}
+                  </text>
                 </g>
               </g>
             </g>
-
           </svg>
         </div>
       </div>
@@ -549,22 +698,55 @@ const resetPointer = () => {
 
 <style scoped>
 .orbit-shell {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(240, 253, 250, 0.82));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+:global(.dark) .orbit-shell,
+:global([data-ui-theme='dark']) .orbit-shell {
   background: linear-gradient(145deg, rgba(2, 6, 23, 0.96), rgba(6, 24, 27, 0.92));
 }
 
 .orbit-background {
   background:
-    radial-gradient(circle at 16% 20%, rgba(52, 211, 153, 0.16), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.16), transparent 20%),
-    radial-gradient(circle at 64% 82%, rgba(13, 148, 136, 0.16), transparent 22%),
+    radial-gradient(circle at 18% 20%, rgba(16, 185, 129, 0.14), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.1), transparent 28%),
+    radial-gradient(circle at 65% 82%, rgba(20, 184, 166, 0.1), transparent 30%),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(240, 253, 250, 0.78) 50%,
+      rgba(248, 250, 252, 0.94) 100%
+    );
+  transition: background 0.3s ease;
+}
+
+:global(.dark) .orbit-background,
+:global([data-ui-theme='dark']) .orbit-background {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(52, 211, 153, 0.16), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.14), transparent 22%),
+    radial-gradient(circle at 64% 82%, rgba(13, 148, 136, 0.16), transparent 24%),
     linear-gradient(145deg, #020617 0%, #071c20 48%, #020617 100%);
 }
 
 .orbit-noise {
   background-image:
+    linear-gradient(rgba(15, 23, 42, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+:global(.dark) .orbit-noise,
+:global([data-ui-theme='dark']) .orbit-noise {
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 48px 48px;
 }
 
 .orbit-scene {
